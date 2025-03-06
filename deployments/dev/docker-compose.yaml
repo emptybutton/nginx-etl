@@ -1,51 +1,80 @@
-name: appname_kebab_case
+name: nginx-etl
 
 services:
-  backend:
+  nginx-etl:
     build:
       context: ../../
-      dockerfile: deployments/dev/backend/Dockerfile
+      dockerfile: deployments/dev/nginx_etl/Dockerfile
       tags:
-        - "appname_kebab_case-backend:dev"
-    container_name: appname_kebab_case-backend
-    volumes:
-      - ../..:/app
-      - backend-data:/run/app
-    ports:
-      - 8000:8000
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      JWT_SECRET: super-secret-jwt-secret
-      POSTGRES_URL: postgresql+psycopg://root:root@postgres/root
-    command: appname_kebab_case-web-service
-    healthcheck:
-      test: wget backend:8000/healthcheck -q -O /dev/null
-      start_period: 1m
-      start_interval: 1s
-      interval: 5s
-
-  postgres:
-    image: postgres:16.3-alpine3.19
-    container_name: appname_kebab_case-postgres
+        - "nginx-etl:dev"
+    container_name: nginx-etl-cli
     labels:
       deployment: dev
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ../..:/app
+      - nginx-etl-data:/run/app
+      - ./nginx:/run/nginx
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      POSTGRES_DB: root
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: root
+      REDIS_URL: redis://redis:6379/0
+
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_USER: nginx-etl
+      CLICKHOUSE_PASSWORD: nginx-etl
+      CLICKHOUSE_DB: main
+
+      NGINX_LOG_FILE_PATH: /run/nginx/fake.log
+      NGINX_LOG_FILE_LINE_BATCH_MAX_SIZE: 5
+    command: bash
+
+  clickhouse:
+    image: clickhouse:25.1.5.31-jammy
+    container_name: nginx-etl-clickhouse
+    labels:
+      deployment: dev
+    environment:
+      CLICKHOUSE_PASSWORD: nginx-etl
+      CLICKHOUSE_USER: nginx-etl
+      CLICKHOUSE_DB: main
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ports:
+      - 8123:8123
     healthcheck:
-      test: pg_isready -d root -U root
+      test: clickhouse-client -d main -u nginx-etl --password nginx-etl -h clickhouse -q "SELECT 1"
       start_period: 1m
       start_interval: 1s
       interval: 5s
 
-volumes:
-  backend-data: null
+  redis:
+    image: redis:7.4.1-alpine3.20
+    container_name: nginx-etl-redis
+    labels:
+      deployment: dev
+    volumes:
+      - redis-data:/data
+      - ./redis:/mnt
+    command: redis-server /mnt/redis.conf
+    healthcheck:
+      test: echo PING | redis-cli | grep -qF PONG
+      start_period: 1m
+      start_interval: 0.5s
+      interval: 1s
 
-  postgres-data:
+volumes:
+  nginx-etl-data: null
+
+  clickhouse-data:
     labels:
       db: true
+      deployment: dev
+
+  redis-data:
+    labels:
+      db: true
+      deployment: dev

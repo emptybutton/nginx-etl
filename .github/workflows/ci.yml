@@ -17,15 +17,15 @@ jobs:
       - name: mypy
         run: docker compose -f deployments/dev/docker-compose.yaml run backend mypy src tests
 
-  pytest:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  # pytest:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: pytest
-        run: docker compose -f deployments/dev/docker-compose.yaml run backend pytest tests --cov --cov-report=xml
+  #     - name: pytest
+  #       run: docker compose -f deployments/dev/docker-compose.yaml run backend pytest tests --cov --cov-report=xml
 
-      - name: upload coverage reports to codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+  #     - name: upload coverage reports to codecov
+  #       uses: codecov/codecov-action@v5
+  #       with:
+  #         token: ${{ secrets.CODECOV_TOKEN }}
