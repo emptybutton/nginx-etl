@@ -8,14 +8,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: ruff
-        run: docker compose -f deployments/dev/docker-compose.yaml run backend ruff check src tests
+        run: docker compose -f deployments/dev/docker-compose.yaml run nginx-etl ruff check src tests
 
   mypy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: mypy
-        run: docker compose -f deployments/dev/docker-compose.yaml run backend mypy src tests
+        run: docker compose -f deployments/dev/docker-compose.yaml run nginx-etl mypy src tests
 
   # pytest:
   #   runs-on: ubuntu-latest
